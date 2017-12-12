@@ -1,5 +1,5 @@
 # 3DLineDetection
-A simple and efficient 3D line detection algorithm for large scale unorganized point cloud
+A simple and efficient 3D line detection algorithm for large scale unorganized point cloud. A conference paper based on this code has been submittd to ICPR2018.
 
 Prerequisites:
 ---
