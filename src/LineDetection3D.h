@@ -23,7 +23,7 @@ public:
 	LineDetection3D();
 	~LineDetection3D();
 
-	void run( PointCloud<double> &data, int k, std::vector<PLANE> &planes, std::vector<std::vector<cv::Point3d> > &lines );
+	void run( PointCloud<double> &data, int k, std::vector<PLANE> &planes, std::vector<std::vector<cv::Point3d> > &lines, std::vector<double> &ts );
 
 	void pointCloudSegmentation( std::vector<std::vector<int> > &regions );
 

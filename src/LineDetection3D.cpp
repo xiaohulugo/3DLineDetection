@@ -15,7 +15,7 @@ LineDetection3D::~LineDetection3D()
 {
 }
 
-void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &planes, std::vector<std::vector<cv::Point3d> > &lines )
+void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &planes, std::vector<std::vector<cv::Point3d> > &lines, std::vector<double> &ts  )
 {
 	this->pointData = data;
 	this->pointNum = data.pts.size();
@@ -27,6 +27,7 @@ void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &
 	char msg[1024];
 
 	timer.Start();
+	cout<<endl<<endl;
 	cout<<"Step1: Point Cloud Segmentation ..."<<endl;
 	std::vector<std::vector<int> > regions;
 	pointCloudSegmentation( regions );
@@ -34,6 +35,7 @@ void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &
 	totalTime += timer.GetElapsedSeconds();
 	timer.PrintElapsedTimeMsg(msg);
 	printf("  Point Cloud Segmentation Time: %s.\n\n", msg);
+	ts.push_back(timer.GetElapsedSeconds());
 
 	// step2: plane based 3D line detection
 	timer.Start();
@@ -43,6 +45,7 @@ void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &
 	totalTime += timer.GetElapsedSeconds();
 	timer.PrintElapsedTimeMsg(msg);
 	printf("  Plane Based 3D LineDetection Time: %s.\n\n", msg);
+	ts.push_back(timer.GetElapsedSeconds());
 
 	// step3: post processing
 	timer.Start();
@@ -52,6 +55,7 @@ void LineDetection3D::run( PointCloud<double> &data, int k, std::vector<PLANE> &
 	totalTime += timer.GetElapsedSeconds();
 	timer.PrintElapsedTimeMsg(msg);
 	printf("  Post Processing Time: %s.\n\n", msg);
+	ts.push_back(timer.GetElapsedSeconds());
 
 	printf("Total Time: %lf.\n\n", totalTime);
 }
@@ -587,11 +591,14 @@ void LineDetection3D::postProcessing( std::vector<PLANE> &planes, std::vector<st
 
 void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 {
-	double thCosAngleIN = cos(10.0/180.0*CV_PI);
+	double thCosAngleIN = cos(12.5/180.0*CV_PI);
 	double thCosAngleNEW = cos(30.0/180.0*CV_PI);
-	double thNonStructPlaneRatio = 0.5;
-	double thNonStructLineRatio = 20;
-	double thCosAngleParal = cos(10.0/180.0*CV_PI);
+	double thNonStructPlaneRatio = 0.3;
+	double thAngle = 12.5;
+	double thCosAngleParal = cos(thAngle/180.0*CV_PI);
+	double thCosAngleOrtho = cos((90.0-thAngle)/180.0*CV_PI);
+	double thNonStructLineRatio = 10;
+	double thStructPlane = 60*this->scale;
 
 	std::vector<int> isPlaneGood(planes.size(), 0);
 #pragma omp parallel for
@@ -603,28 +610,28 @@ void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 		}
 
 		// step1: remove non-structural planes
-		std::vector<double> lengths;
-		std::vector<cv::Mat> orients;
+		std::vector<double> lengthsAll;
+		std::vector<cv::Mat> orientsAll;
 		std::vector<std::pair<int, double> > lineInfos;
-		std::vector<std::vector<double> > lengths2(planes[i].lines3d.size());
-		std::vector<std::vector<cv::Mat> > orients2(planes[i].lines3d.size());
+		std::vector<std::vector<double> > lengths(planes[i].lines3d.size());
+		std::vector<std::vector<cv::Mat> > orients(planes[i].lines3d.size());
 
 		double totalLength = 0.0;
 		int count = 0;
 		for (int m=0; m<planes[i].lines3d.size(); ++m)
 		{
-			lengths2[m].resize(planes[i].lines3d[m].size());
-			orients2[m].resize(planes[i].lines3d[m].size());
+			lengths[m].resize(planes[i].lines3d[m].size());
+			orients[m].resize(planes[i].lines3d[m].size());
 			for (int n=0; n<planes[i].lines3d[m].size(); ++n)
 			{
 				cv::Mat orientTemp = cv::Mat(planes[i].lines3d[m][n][1] - planes[i].lines3d[m][n][0]);
 				double lengthTemp = cv::norm(orientTemp);
-				lengths.push_back(lengthTemp);
-				lengths2[m][n] = lengthTemp;
+				lengthsAll.push_back(lengthTemp);
+				lengths[m][n] = lengthTemp;
 
 				orientTemp *= 1.0/lengthTemp;
-				orients.push_back(orientTemp);
-				orients2[m][n] = orientTemp;
+				orientsAll.push_back(orientTemp);
+				orients[m][n] = orientTemp;
 
 				std::pair<int, double> lineInfoTemp(count, lengthTemp);
 				lineInfos.push_back(lineInfoTemp);
@@ -645,7 +652,7 @@ void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 			if (!clusterInfos.size())
 			{
 				clusterInfos.push_back(std::pair<int, double>(clusterInfos.size(), length));
-				clusterOrient.push_back(orients[id]);
+				clusterOrient.push_back(orientsAll[id]);
 				continue;
 			}
 
@@ -653,7 +660,7 @@ void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 			double cosValueMin = 100;
 			for (int m=0; m<clusterInfos.size(); ++m)
 			{
-				double cosValue = abs(orients[id].dot(clusterOrient[m]));
+				double cosValue = abs(orientsAll[id].dot(clusterOrient[m]));
 				if ( cosValue < cosValueMin )
 				{
 					cosValueMin =  cosValue;
@@ -669,96 +676,110 @@ void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 			if (!isIn && cosValueMin < thCosAngleNEW)
 			{
 				clusterInfos.push_back(std::pair<int, double>(clusterInfos.size(), length));
-				clusterOrient.push_back(orients[id]);
+				clusterOrient.push_back(orientsAll[id]);
 				continue;
 			}
 		}
 
-		std::vector<cv::Mat> structuralOrients;
-		if ( clusterInfos.size() == 1 )
+		double scaleCur = max(this->scale,planes[i].scale);
+		if ( clusterInfos.size() > 1)
 		{
-			structuralOrients.push_back(clusterOrient[0]);
-		}
-		else if ( clusterInfos.size() > 1 )
-		{
-			if ( clusterInfos[0].second + clusterInfos[1].second < thNonStructPlaneRatio*totalLength )
+			double LStruct =  clusterInfos[0].second + clusterInfos[1].second;
+			if( LStruct < thNonStructPlaneRatio*totalLength || LStruct < thStructPlane ) 
 			{
 				continue;
 			}
-			structuralOrients.push_back(clusterOrient[0]);
-			structuralOrients.push_back(clusterOrient[1]);
 		}
 
 		// step2: remove non-structural lines
 		PLANE planeNew;
 		planeNew.scale = planes[i].scale;
-		double scaleCur = max(planes[i].scale, this->scale);
+		//double scaleCur = planes[i].scale;
 		double thNonStructLineLength = scaleCur*thNonStructLineRatio;
 		for (int m=0; m<planes[i].lines3d.size(); ++m)
 		{
-			// judge if the contour is structural
 			int numLines = planes[i].lines3d[m].size();
-			double lengthTotalTemp = 0.0, lengthStructTemp = 0.0;
+
+			double lengthTotal = 0.0;
 			for (int n=0; n<numLines; ++n)
 			{
-				lengthTotalTemp += lengths2[m][n];
-
-				for (int j=0; j<structuralOrients.size(); ++j)
-				{
-					double cosAngle = abs(orients2[m][n].dot(structuralOrients[j]));
-					if (cosAngle > thCosAngleParal)
-					{
-						lengthStructTemp += lengths2[m][n];
-						break;
-					}
-				}
-			}
-			if ( lengthTotalTemp < 3*thNonStructLineLength)
-			{
-				continue;
+				lengthTotal += lengths[m][n];
 			}
 
-			double ratioStruct = lengthStructTemp/lengthTotalTemp;
-			std::vector<int> idxStruct;
-			if ( ratioStruct >= 0.9)
+			double ratioStruct = 0.0;
+			double lengthStruct = 0.0;
+			std::vector<int> isStruct(numLines, 0);
+			if (numLines > 1)
 			{
-				for (int n=0; n<numLines; ++n)
+				// judge if the contour is structural
+				std::vector<int> idxOrthoPara;
+				for (int n=0; n<numLines-1; ++n)
 				{
-					if (lengths2[m][n] > thNonStructLineLength)
+					int id1 = n;
+					int id2 = (n+1)%numLines;
+
+					double cosAngle = abs(orients[m][id1].dot(orients[m][id2]));
+					if (cosAngle > thCosAngleParal || cosAngle < thCosAngleOrtho)
 					{
-						idxStruct.push_back(n);
+						idxOrthoPara.push_back(id1);
+						idxOrthoPara.push_back(id2);
 					}
 				}
-			}
-			else if( ratioStruct < 0.9 && ratioStruct >= 0.3 )
-			{
-				for (int n=0; n<numLines; ++n)
+
+				if (idxOrthoPara.size())
 				{
-					if (lengths2[m][n] > 3*thNonStructLineLength)
+					// structural ratio
+					std::sort( idxOrthoPara.begin(), idxOrthoPara.end(), [](const int& lhs, const int& rhs) { return lhs > rhs; } );
+
+					int idTemp = idxOrthoPara[0];
+					isStruct[idTemp] = 1;
+					lengthStruct = lengths[m][idTemp];
+					for (int n=0; n<idxOrthoPara.size(); ++n)
 					{
-						idxStruct.push_back(n);
+						if (idxOrthoPara[n] != idTemp)
+						{
+							lengthStruct += lengths[m][idxOrthoPara[n]];
+							idTemp = idxOrthoPara[n];
+							isStruct[idTemp] = 1;
+						}
 					}
-				}
-			}
-			else
-			{
-				for (int n=0; n<numLines; ++n)
-				{
-					if (lengths2[m][n] > 4*thNonStructLineLength)
-					{
-						idxStruct.push_back(n);
-					}
+
+					ratioStruct = lengthStruct/lengthTotal;
 				}
 			}
 
-			if (idxStruct.size())
+			std::vector<std::vector<cv::Point3d> > contourTemp;
+			for (int n=0; n<numLines; ++n)
 			{
-				std::vector<std::vector<cv::Point3d> > temp(idxStruct.size());
-				for (int n=0; n<idxStruct.size(); ++n)
+				double thLengthTemp = 0.0;
+				if (isStruct[n])
 				{
-					temp[n] = planes[i].lines3d[m][idxStruct[n]];
+					if(ratioStruct>=0.75) 
+					{
+						thLengthTemp = thNonStructLineLength;
+					}
+					else if (ratioStruct>=0.5) 
+					{
+						thLengthTemp = 2*thNonStructLineLength;
+					}
+					else 
+					{
+						thLengthTemp = 4*thNonStructLineLength;
+					}
 				}
-				planeNew.lines3d.push_back(temp);
+				else
+				{
+					thLengthTemp = 4*thNonStructLineLength;
+				}
+
+				if (lengths[m][n] > thLengthTemp)
+				{
+					contourTemp.push_back(planes[i].lines3d[m][n]);
+				}
+			}
+			if (contourTemp.size())
+			{
+				planeNew.lines3d.push_back(contourTemp);
 			}
 		}
 
@@ -784,7 +805,7 @@ void LineDetection3D::outliersRemoval( std::vector<PLANE> &planes )
 void LineDetection3D::lineMerging( std::vector<PLANE> &planes, std::vector<std::vector<cv::Point3d> > &lines )
 {
 	double thGapRatio = 20;
-	double thMergeRatio = 4;
+	double thMergeRatio = 6;
 	double thDisHyps = 0.1;
 
 	// get all the lines
@@ -910,7 +931,7 @@ void LineDetection3D::lineMerging( std::vector<PLANE> &planes, std::vector<std::
 
 			double gapLength = disMerge - length0 - length1;
 			double gapRatio = gapLength / length0;
-			if ( gapRatio < 0.05 && gapLength < thGapRatio*lineScale )
+			if ( gapRatio < 0.1 && gapLength < thGapRatio*lineScale )
 			{
 				// update line id0
 				if (gapRatio > 0)

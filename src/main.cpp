@@ -114,8 +114,8 @@ void writeOutLines( string filePath, std::vector<std::vector<cv::Point3d> > &lin
 
 void main() 
 {
-	string fileData = "D://DevelopCenter//XiaohuLU//paper//ICPR2018//Experiment//data//ShapeRepository//Facade//data.txt";
-	string fileOut  = "D://DevelopCenter//XiaohuLU//paper//ICPR2018//Experiment//data//ShapeRepository//Facade//data";
+	string fileData = "D://Facade//data.txt";
+	string fileOut  = "D://Facade//data";
 
 	// read in data
 	PointCloud<double> pointData; 
@@ -125,7 +125,8 @@ void main()
 	LineDetection3D detector;
 	std::vector<PLANE> planes;
 	std::vector<std::vector<cv::Point3d> > lines;
-	detector.run( pointData, k, planes, lines );
+	std::vector<double> ts;
+	detector.run( pointData, k, planes, lines, ts );
 	cout<<"lines number: "<<lines.size()<<endl;
 	cout<<"planes number: "<<planes.size()<<endl;
 	
