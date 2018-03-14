@@ -11,6 +11,7 @@ Usage:
 ---
 1. build the project with Cmake
 2. run the code
+3. The default parameters are useful for general cases without tunning(at least for these cases in the experiences of the paper). However, you can also adjust the parameters if the result is not very good.
 
 Performance:
 ---
