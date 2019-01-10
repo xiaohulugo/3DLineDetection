@@ -23,5 +23,5 @@ Feel free to correct my code, if you spotted the mistakes. You are also welcomed
 Citation:
 ---
 Please cite the following paper if this you feel this code helpful.
-Paper: https://arxiv.org/abs/1901.02532
-Citations: 	arXiv:1901.02532
+
+    Lu, Xiaohu and Liu, Yahui and Li, Kai. "Fast 3D Line Segment Detection From Unorganized Point Cloud." arXiv preprint arXiv:1901.02532 (2019).
