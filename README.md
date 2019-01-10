@@ -1,5 +1,5 @@
 # 3DLineDetection
-A simple and efficient 3D line detection algorithm for large scale unorganized point cloud. A conference paper based on this code has been submittd to ICPR2018.
+A simple and efficient 3D line detection algorithm for large scale unorganized point cloud. A conference paper based on this code can be found here https://arxiv.org/abs/1901.02532
 
 Prerequisites:
 ---
@@ -19,3 +19,9 @@ On a computer with Intel Core i5-3550p CPU, the computing time for point clouds 
 ![image](https://github.com/xiaohulugo/images/blob/master/3DLineDetection.jpg)
 
 Feel free to correct my code, if you spotted the mistakes. You are also welcomed to Email me: fangzelu@gmail.com
+
+Citation:
+---
+Please cite the following paper if this you feel this code helpful.
+Paper: https://arxiv.org/abs/1901.02532
+Citations: 	arXiv:1901.02532
