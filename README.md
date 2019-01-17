@@ -20,7 +20,7 @@ On a computer with Intel Core i5-3550p CPU, the computing time for point clouds 
 
 Feel free to correct my code, if you spotted the mistakes. You are also welcomed to Email me: fangzelu@gmail.com
 
-NOtice: Basically, this code works well for dense and accurate point clouds, while poor for noisy ones.
+Notice: Basically, this code works well for dense and accurate point clouds, while poor for noisy ones.
 ---
 
 Citation:
