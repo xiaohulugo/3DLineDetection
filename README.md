@@ -27,4 +27,11 @@ Citation:
 ---
 Please cite the following paper if this you feel this code helpful.
 
-    Lu, Xiaohu and Liu, Yahui and Li, Kai. "Fast 3D Line Segment Detection From Unorganized Point Cloud." arXiv preprint arXiv:1901.02532 (2019).
+```
+@article{lu2019fast,
+title={Fast 3D Line Segment Detection From Unorganized Point Cloud},
+author={Xiaohu, Lu and Yahui, Liu and Kai, Li},
+journal={arXiv preprint arXiv:1901.02532},
+year={2019},
+}
+```
