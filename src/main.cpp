@@ -81,6 +81,29 @@ void writeOutPlanes( string filePath, std::vector<PLANE> &planes, double scale )
 	fclose( fp2 );
 }
 
+void writeOutPlanesObj(string filePath, std::vector<PLANE> &planes,
+                       double scale) {
+  string fileEdgePoints = filePath + "planes.obj";
+  std::ofstream file;
+  file.open(fileEdgePoints.c_str());
+
+  int cnt = 0;
+  for (int p = 0; p < planes.size(); ++p) {
+    for (int i = 0; i < planes[p].lines3d.size(); ++i) {
+      for (int j = 0; j < planes[p].lines3d[i].size(); ++j) {
+        cnt++;
+        auto &a = planes[p].lines3d[i][j][0], &b = planes[p].lines3d[i][j][1];
+        file << "v " << a.x << ' ' << a.y << ' ' << a.z << std::endl
+             << "v " << b.x << ' ' << b.y << ' ' << b.z << std::endl;
+      }
+    }
+  }
+  for (int p = 0; p < cnt; ++p) {
+    file << "l " << p * 2 + 1 << ' ' << p * 2 + 2 << std::endl;
+  }
+  file.close();
+}
+
 void writeOutLines( string filePath, std::vector<std::vector<cv::Point3d> > &lines, double scale )
 {
 	// write out bounding polygon result
@@ -111,8 +134,27 @@ void writeOutLines( string filePath, std::vector<std::vector<cv::Point3d> > &lin
 	fclose( fp2 );
 }
 
+void writeOutLinesObj(string filePath,
+                      std::vector<std::vector<cv::Point3d>> &lines,
+                      double scale) {
+  string fileEdgePoints = filePath + "lines.obj";
+  std::ofstream file;
+  file.open(fileEdgePoints.c_str());
 
-void main() 
+  for (int p = 0; p < lines.size(); ++p) {
+    file << "v " << lines[p][0].x << ' ' << lines[p][0].y << ' '
+         << lines[p][0].z << std::endl
+         << "v " << lines[p][1].x << ' ' << lines[p][1].y << ' '
+         << lines[p][1].z << std::endl;
+  }
+
+  for (int p = 0; p < lines.size(); ++p) {
+    file << "l " << p * 2 + 1 << ' ' << p * 2 + 2 << std::endl;
+  }
+  file.close();
+}
+
+int main() 
 {
 	string fileData = "D://Facade//data.txt";
 	string fileOut  = "D://Facade//data";
@@ -130,6 +172,6 @@ void main()
 	cout<<"lines number: "<<lines.size()<<endl;
 	cout<<"planes number: "<<planes.size()<<endl;
 	
-	writeOutPlanes( fileOut, planes, detector.scale );
-	writeOutLines( fileOut, lines, detector.scale );
+	writeOutPlanesObj( fileOut, planes, detector.scale );
+	writeOutLinesObj( fileOut, lines, detector.scale );
 }
